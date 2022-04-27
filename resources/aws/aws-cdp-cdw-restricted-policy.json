@@ -1,0 +1,46 @@
+{
+"Version": "2012-10-17",
+"Statement": [
+    {
+    "Sid": "VisualEditor0",
+    "Effect": "Allow",
+    "Action": "iam:SimulatePrincipalPolicy",
+    "Resource": "arn:aws:iam::968232777816:role/*"
+    },
+    {
+        "Sid": "VisualEditor1",
+        "Effect": "Allow",
+        "Action": [
+            "acm:DescribeCertificate",
+            "acm:ListCertificates",
+            "autoscaling:DescribeAutoScalingGroups",
+            "autoscaling:SuspendProcesses",
+            "cloudformation:DescribeStackEvents",
+            "cloudformation:DescribeStacks",
+            "cloudformation:UpdateStack",
+            "ec2:CreateKeyPair",
+            "ec2:CreateTags",
+            "ec2:DeleteKeyPair",
+            "ec2:DescribeDhcpOptions",
+            "ec2:DescribeKeyPairs",
+            "ec2:DescribeRouteTables",
+            "ec2:DescribeSubNets",
+            "ec2:DescribeVpcAttribute",
+            "ec2:DescribeVpcs",
+            "eks:DescribeCluster",
+            "eks:DescribeUpdate",
+            "eks:TagResource",
+            "eks:UpdateClusterConfig",
+            "eks:UpdateClusterVersion",
+            "iam:GetRolePolicy",
+            "iam:PutRolePolicy",
+            "logs:PutRetentionPolicy",
+            "s3:GetBucketLocation",
+            "s3:GetObject",
+            "s3:ListBucket",
+            "s3:PutObject",
+            "s3:PutObjectAcl"
+        ],
+        "Resource": "*"
+    }
+]}

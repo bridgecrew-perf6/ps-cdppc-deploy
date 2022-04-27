@@ -1,7 +1,6 @@
 # Prepare the AWS Environment
 
 ## AWS Region
-
 Check the AWS Region:
 ```console
 aws configure get region
@@ -16,8 +15,15 @@ aws configure set region us-east-1
 
 Export the variables to reuse in the next commands:
 ```console
+# Ignore paging
+export AWS_PAGER=""
+
 # Region
 export AWS_REGION=$(aws configure get region)
+
+# CDP Environment
+export CDP_ENV_NAME="efranceschi"
+export AWS_ACCOUNT_ID=$(aws sts get-caller-identity | jq -r .Account)
 
 # Tags Helpers
 function aws_tags() {
@@ -27,8 +33,8 @@ function aws_tags() {
     echo "["
     while [ "$#" -ge 2 ]; do aws_tag "$1" "$2"; echo ","; shift 2; done
     # edit as you need
-    aws_tag "tag1" "value1"
-    aws_tag "tag2" "value2"
+    aws_tag "owner" "$USER"; echo ","
+    aws_tag "env" "$CDP_ENV_NAME"; echo
     echo "]"
 }
 
@@ -37,10 +43,6 @@ function tag_spec() {
     shift; aws_tags $*
     echo "}"
 }
-
-# CDP Environment
-export CDP_ENV_NAME="efranceschi"
-export AWS_ACCOUNT_ID=$(aws sts get-caller-identity | jq -r .Account)
 
 # Role
 export IDBROKER_ROLE=${CDP_ENV_NAME}-idbroker-role
@@ -68,21 +70,22 @@ export CDP_EXTERNAL_ID="$(cdp environments get-credential-prerequisites --cloud-
 ## Create a SSH key pair
 Create a local key pair:
 ```console
-ssh-keygen -t rsa -b 2048 -f ${CDP_ENV_NAME} -m PEM
+mkdir -p $HOME/.ssh
+ssh-keygen -q -t rsa -b 2048 -f $HOME/.ssh/${CDP_ENV_NAME} -m PEM -N ""
 ```
 
 Import key-pair to AWS:
 ```console
 aws ec2 import-key-pair \
     --key-name "${CDP_ENV_NAME}-keypair" \
-    --public-key-material fileb://${CDP_ENV_NAME}.pub \
+    --public-key-material fileb://${HOME}/.ssh/${CDP_ENV_NAME}.pub \
     --tag-specifications "$(tag_spec key-pair)"
 ```
 
 ## Create the VPC
 ```console
 # Example: /21 network = 246 hosts with 8 x /24 subnets
-# See: http://jodies.de/ipcalc?host=10.10.0.0&mask1=21&mask2=25
+# See: http://jodies.de/ipcalc?host=10.10.0.0&mask1=21&mask2=24
 
 # VPC 10.10.0.0/21
 export VPC_ID=$(aws ec2 create-vpc \
@@ -106,68 +109,70 @@ aws ec2 attach-internet-gateway \
 
 ## Create Private Subnets
 ```console
-# Private Subnet 10.10.0.0/25 AZ-A
+# Private Subnet 10.10.0.0/24 AZ-A
 export PRIV_SUB1A=$(aws ec2 create-subnet \
     --vpc-id "${VPC_ID}" \
-    --cidr-block 10.10.0.0/25 \
+    --cidr-block 10.10.0.0/24 \
     --availability-zone "${AWS_REGION}a" \
     --tag-specifications "$(tag_spec subnet Name ${CDP_ENV_NAME}-priv-subnet-1a)" \
     | jq -r .Subnet.SubnetId
 )
 
-# Private Subnet 10.10.0.128/25 AZ-B
+# Private Subnet 10.10.1.0/24 AZ-B
 export PRIV_SUB1B=$(aws ec2 create-subnet \
     --vpc-id "${VPC_ID}" \
-    --cidr-block 10.10.0.128/25 \
+    --cidr-block 10.10.1.0/24 \
     --availability-zone "${AWS_REGION}b" \
     --tag-specifications "$(tag_spec subnet Name ${CDP_ENV_NAME}-priv-subnet-1b)" \
     | jq -r .Subnet.SubnetId
 )
 
-# Private Subnet 10.10.1.0/25 AZ-A
-export PRIV_SUB2A=$(aws ec2 create-subnet \
+# Private Subnet 10.10.2.0/24 AZ-C
+export PRIV_SUB1C=$(aws ec2 create-subnet \
     --vpc-id "${VPC_ID}" \
-    --cidr-block 10.10.1.0/25 \
-    --availability-zone "${AWS_REGION}a" \
-    --tag-specifications "$(tag_spec subnet Name ${CDP_ENV_NAME}-priv-subnet-2a)" \
-    | jq -r .Subnet.SubnetId
-)
-
-# Private Subnet 10.10.1.0/25 AZ-B
-export PRIV_SUB2B=$(aws ec2 create-subnet \
-    --vpc-id "${VPC_ID}" \
-    --cidr-block 10.10.1.128/25 \
-    --availability-zone "${AWS_REGION}b" \
-    --tag-specifications "$(tag_spec subnet Name ${CDP_ENV_NAME}-priv-subnet-2b)" \
+    --cidr-block 10.10.2.0/24 \
+    --availability-zone "${AWS_REGION}c" \
+    --tag-specifications "$(tag_spec subnet Name ${CDP_ENV_NAME}-priv-subnet-1c)" \
     | jq -r .Subnet.SubnetId
 )
 ```
 
 ## Create Public Subnets
 ```console
-# Public Subnet 10.10.6.0/25 AZ-A
+# Public Subnet 10.10.3.0/24 AZ-A
 export PUB_SUB1A=$(aws ec2 create-subnet \
     --vpc-id "${VPC_ID}" \
-    --cidr-block 10.10.6.0/25 \
+    --cidr-block 10.10.3.0/24 \
     --availability-zone "${AWS_REGION}a" \
     --tag-specifications "$(tag_spec subnet Name ${CDP_ENV_NAME}-pub-subnet-1a)" \
     | jq -r .Subnet.SubnetId
 )
 
-# Public Subnet 10.10.6.0/25 AZ-B
+# Public Subnet 10.10.4.0/24 AZ-B
 export PUB_SUB1B=$(aws ec2 create-subnet \
     --vpc-id "${VPC_ID}" \
-    --cidr-block 10.10.6.128/25 \
+    --cidr-block 10.10.4.0/24 \
     --availability-zone "${AWS_REGION}b" \
     --tag-specifications "$(tag_spec subnet Name ${CDP_ENV_NAME}-pub-subnet-1b)" \
+    | jq -r .Subnet.SubnetId
+)
+
+# Public Subnet 10.10.5.0/24 AZ-C
+export PUB_SUB1C=$(aws ec2 create-subnet \
+    --vpc-id "${VPC_ID}" \
+    --cidr-block 10.10.5.0/24 \
+    --availability-zone "${AWS_REGION}c" \
+    --tag-specifications "$(tag_spec subnet Name ${CDP_ENV_NAME}-pub-subnet-1c)" \
     | jq -r .Subnet.SubnetId
 )
 ```
 
 ## Allocate Addresses
 ```console
-EIP_A=$(aws ec2 allocate-address --domain vpc | jq -r .AllocationId)
-EIP_B=$(aws ec2 allocate-address --domain vpc | jq -r .AllocationId)
+# Elastic IPs for NAT
+#EIP_A=$(aws ec2 allocate-address --domain vpc | jq -r .AllocationId)
+#EIP_B=$(aws ec2 allocate-address --domain vpc | jq -r .AllocationId)
+#EIP_C=$(aws ec2 allocate-address --domain vpc | jq -r .AllocationId)
 ```
 
 ## Create a NAT Gateway
@@ -175,7 +180,7 @@ EIP_B=$(aws ec2 allocate-address --domain vpc | jq -r .AllocationId)
 # AZ-A
 export NGW_A=$(aws ec2 create-nat-gateway \
     --subnet-id "${PUB_SUB1A}" \
-    --allocation-id "${EIP_A}" \
+    --connectivity-type private \
     --tag-specifications "$(tag_spec natgateway Name ${CDP_ENV_NAME}-nat-a)" \
     | jq -r .NatGateway.NatGatewayId
 )
@@ -183,8 +188,16 @@ export NGW_A=$(aws ec2 create-nat-gateway \
 # AZ-B
 export NGW_B=$(aws ec2 create-nat-gateway \
     --subnet-id "${PUB_SUB1B}" \
-    --allocation-id "${EIP_B}" \
+    --connectivity-type private \
     --tag-specifications "$(tag_spec natgateway Name ${CDP_ENV_NAME}-nat-b)" \
+    | jq -r .NatGateway.NatGatewayId
+)
+
+# AZ-C
+export NGW_C=$(aws ec2 create-nat-gateway \
+    --subnet-id "${PUB_SUB1C}" \
+    --connectivity-type private \
+    --tag-specifications "$(tag_spec natgateway Name ${CDP_ENV_NAME}-nat-c)" \
     | jq -r .NatGateway.NatGatewayId
 )
 ```
@@ -194,7 +207,7 @@ export NGW_B=$(aws ec2 create-nat-gateway \
 # AZ-A
 export PRIV_RTB_A_ID=$(aws ec2 create-route-table \
     --vpc-id "${VPC_ID}" \
-    --tag-specifications "$(tag_spec route-table Name ${CDP_ENV_NAME}-igw)" \
+    --tag-specifications "$(tag_spec route-table Name ${CDP_ENV_NAME}-a)" \
     | jq -r .RouteTable.RouteTableId
 )
 
@@ -206,7 +219,7 @@ aws ec2 create-route \
 # AZ-B
 export PRIV_RTB_B_ID=$(aws ec2 create-route-table \
     --vpc-id "${VPC_ID}" \
-    --tag-specifications "$(tag_spec route-table Name ${CDP_ENV_NAME}-igw)" \
+    --tag-specifications "$(tag_spec route-table Name ${CDP_ENV_NAME}-b)" \
     | jq -r .RouteTable.RouteTableId
 )
 
@@ -214,6 +227,18 @@ aws ec2 create-route \
     --route-table-id "${PRIV_RTB_B_ID}" \
     --destination-cidr-block "0.0.0.0/0" \
     --nat-gateway-id "${NGW_B}"
+
+# AZ-C
+export PRIV_RTB_C_ID=$(aws ec2 create-route-table \
+    --vpc-id "${VPC_ID}" \
+    --tag-specifications "$(tag_spec route-table Name ${CDP_ENV_NAME}-c)" \
+    | jq -r .RouteTable.RouteTableId
+)
+
+aws ec2 create-route \
+    --route-table-id "${PRIV_RTB_C_ID}" \
+    --destination-cidr-block "0.0.0.0/0" \
+    --nat-gateway-id "${NGW_C}"
 ```
 
 ## Create Routing Table for Public Subnets
@@ -227,7 +252,7 @@ export PUB_RTB_ID=$(aws ec2 create-route-table \
 aws ec2 create-route \
     --route-table-id "${PUB_RTB_ID}" \
     --destination-cidr-block "0.0.0.0/0" \
-    --nat-gateway-id "${IGW_ID}"
+    --gateway-id "${IGW_ID}"
 ```
 
 # Enable map public ip on launch
@@ -239,10 +264,15 @@ aws ec2 modify-subnet-attribute \
 aws ec2 modify-subnet-attribute \
     --subnet-id "${PUB_SUB1B}" \
     --map-public-ip-on-launch
+
+aws ec2 modify-subnet-attribute \
+    --subnet-id "${PUB_SUB1C}" \
+    --map-public-ip-on-launch
 ```
 
 # Replace the routing table
 ```console
+# Public subnets
 aws ec2 associate-route-table \
     --route-table-id "${PUB_RTB_ID}" \
     --subnet-id "${PUB_SUB1A}"
@@ -252,21 +282,21 @@ aws ec2 associate-route-table \
     --subnet-id "${PUB_SUB1B}"
 
 aws ec2 associate-route-table \
-    --route-table-id "${PRIV_RTB_A_ID}" \
-    --subnet-id "${PRIV_SUB1A}"
+    --route-table-id "${PUB_RTB_ID}" \
+    --subnet-id "${PUB_SUB1C}"
 
+# Private subnets
 aws ec2 associate-route-table \
     --route-table-id "${PRIV_RTB_A_ID}" \
-    --subnet-id "${PRIV_SUB2A}"
+    --subnet-id "${PRIV_SUB1A}"
 
 aws ec2 associate-route-table \
     --route-table-id "${PRIV_RTB_B_ID}" \
     --subnet-id "${PRIV_SUB1B}"
 
 aws ec2 associate-route-table \
-    --route-table-id "${PRIV_RTB_B_ID}" \
-    --subnet-id "${PRIV_SUB2B}"
-
+    --route-table-id "${PRIV_RTB_C_ID}" \
+    --subnet-id "${PRIV_SUB1C}"
 ```
 
 ## Create a S3 Buckets
