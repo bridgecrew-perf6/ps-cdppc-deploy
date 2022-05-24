@@ -1,0 +1,267 @@
+{
+    "Version": "2012-10-17",
+    "Id": "ComputePolicy_v5",
+    "Statement": [
+        {
+            "Sid": "SimulatePrincipalPolicy",
+            "Effect": "Allow",
+            "Action": [
+                "iam:SimulatePrincipalPolicy"
+            ],
+            "Resource": [
+                "arn:aws:iam::[YOUR-ACCOUNT-ID]:role/[YOUR-IAM-ROLE-NAME]"
+            ]
+        },
+        {
+            "Sid": "RestrictedPermissionsViaClouderaRequestTag",
+            "Effect": "Allow",
+            "Action": [
+                "cloudformation:CreateStack",
+                "cloudformation:CreateChangeSet",
+                "ec2:createTags",
+                "eks:TagResource"
+            ],
+            "Resource": "*",
+            "Condition": {
+                "StringLike": {
+                    "aws:RequestTag/Cloudera-Resource-Name": [
+                        "crn:cdp:*"
+                    ]
+                }
+            }
+        },
+        {
+            "Sid": "RestrictedPermissionsViaClouderaResourceTag",
+            "Effect": "Allow",
+            "Action": [
+                "autoscaling:DetachInstances",
+                "autoscaling:ResumeProcesses",
+                "autoscaling:SetDesiredCapacity",
+                "autoscaling:SuspendProcesses",
+                "autoscaling:UpdateAutoScalingGroup",
+                "autoscaling:DeleteTags",
+                "autoscaling:TerminateInstanceInAutoScalingGroup",
+                "cloudformation:DeleteStack",
+                "cloudformation:DescribeStacks"
+            ],
+            "Resource": "*",
+            "Condition": {
+                "StringLike": {
+                    "aws:ResourceTag/Cloudera-Resource-Name": [
+                        "crn:cdp:*"
+                    ]
+                }
+            }
+        },
+        {
+            "Sid": "RestrictedPermissionsViaCloudFormation",
+            "Effect": "Allow",
+            "Action": [
+                "ec2:CreateSecurityGroup",
+                "ec2:DeleteSecurityGroup",
+                "ec2:AuthorizeSecurityGroupIngress",
+                "ec2:RevokeSecurityGroupIngress",
+                "ec2:AuthorizeSecurityGroupEgress",
+                "ec2:RevokeSecurityGroupEgress",
+                "ec2:CreateLaunchTemplate",
+                "ec2:DeleteLaunchTemplate",
+                "autoscaling:CreateAutoScalingGroup",
+                "autoscaling:DeleteAutoScalingGroup",
+                "autoscaling:CreateOrUpdateTags",
+                "autoscaling:CreateLaunchConfiguration",
+                "eks:CreateCluster",
+                "eks:DeleteCluster"
+            ],
+            "Resource": "*",
+            "Condition": {
+                "ForAnyValue:StringEquals": {
+                    "aws:CalledVia": [
+                        "cloudformation.amazonaws.com"
+                    ]
+                }
+            }
+        },
+        {
+            "Sid": "RestrictedEC2PermissionsViaClouderaResourceTag",
+            "Effect": "Allow",
+            "Action": [
+                "ec2:RebootInstances",
+                "ec2:StartInstances",
+                "ec2:StopInstances",
+                "ec2:TerminateInstances"
+            ],
+            "Resource": [
+                "*"
+            ],
+            "Condition": {
+                "ForAnyValue:StringLike": {
+                    "ec2:ResourceTag/Cloudera-Resource-Name": [
+                        "crn:cdp:*"
+                    ]
+                }
+            }
+        },
+        {
+            "Sid": "RestrictedIamPermissionsToClouderaResources",
+            "Effect": "Allow",
+            "Action": [
+                "iam:PassRole"
+            ],
+            "Resource": [
+                "arn:aws:iam::[YOUR-ACCOUNT-ID]:role/[YOUR-IDBROKER-ROLE-NAME]",
+                "arn:aws:iam::[YOUR-ACCOUNT-ID]:role/[YOUR-LOG-ROLE-NAME]",
+                "arn:aws:iam::[YOUR-ACCOUNT-ID]:role/liftie-*-eks-service-role",
+                "arn:aws:iam::[YOUR-ACCOUNT-ID]:role/liftie-*-eks-worker-nodes",
+                "arn:aws:iam::[YOUR-ACCOUNT-ID]:role/cdp-eks-master-role",
+                "arn:aws:iam::[YOUR-ACCOUNT-ID]:role/cdp-liftie-instance-profile"
+            ]
+        },
+        {
+            "Sid": "RestrictedKMSPermissionsUsingCustomerProvidedKey",
+            "Effect": "Allow",
+            "Action": [
+                "kms:CreateGrant",
+                "kms:DescribeKey",
+                "kms:Encrypt",
+                "kms:Decrypt",
+                "kms:ReEncrypt*",
+                "kms:GenerateDataKey*"
+            ],
+            "Resource": [
+                "[YOUR-KMS-CUSTOMER-MANAGED-KEY-ARN]"
+            ]
+        },
+        {
+            "Sid": "AllowCreateDeleteTagsForSubnets",
+            "Effect": "Allow",
+            "Action": [
+                "ec2:CreateTags",
+                "ec2:DeleteTags"
+            ],
+            "Resource": [
+                "[YOUR-SUBNET-ARN-1]",
+                "[YOUR-SUBNET-ARN-2]",
+                "[YOUR-SUBNET-ARN-N]"
+            ]
+        },
+        {
+            "Sid": "OtherPermissions",
+            "Effect": "Allow",
+            "Action": [
+                "autoscaling:DescribeScheduledActions",
+                "autoscaling:DescribeAutoScalingGroups",
+                "autoscaling:DescribeAutoScalingInstances",
+                "autoscaling:DescribeTags",
+                "autoscaling:DescribeLaunchConfigurations",
+                "autoscaling:DeleteLaunchConfiguration",
+                "autoscaling:DescribeScalingActivities",
+                "cloudformation:DescribeChangeSet",
+                "cloudformation:DeleteChangeSet",
+                "cloudformation:ExecuteChangeSet",
+                "cloudformation:CancelUpdateStack",
+                "cloudformation:ContinueUpdateRollback",
+                "cloudformation:DescribeStackEvents",
+                "cloudformation:DescribeStackResource",
+                "cloudformation:DescribeStackResources",
+                "cloudwatch:deleteAlarms",
+                "cloudwatch:putMetricAlarm",
+                "dynamodb:DescribeTable",
+                "ec2:AttachVolume",
+                "ec2:CreateNetworkInterface",
+                "ec2:CreatePlacementGroup",
+                "ec2:CreateVolume",
+                "ec2:DeleteKeyPair",
+                "ec2:DeleteNetworkInterface",
+                "ec2:DeletePlacementGroup",
+                "ec2:DeleteVolume",
+                "ec2:DescribeAccountAttributes",
+                "ec2:DescribeAvailabilityZones",
+                "ec2:DescribeImages",
+                "ec2:DescribeInstanceStatus",
+                "ec2:DescribeInstances",
+                "ec2:DescribeInstanceTypes",
+                "ec2:DescribeKeyPairs",
+                "ec2:DescribeLaunchTemplateVersions",
+                "ec2:DescribeLaunchTemplates",
+                "ec2:DescribeNetworkInterfaces",
+                "ec2:DescribePlacementGroups",
+                "ec2:DescribeRegions",
+                "ec2:DescribeRouteTables",
+                "ec2:DescribeSecurityGroups",
+                "ec2:DescribeSubnets",
+                "ec2:DescribeVolumes",
+                "ec2:DescribeVpcAttribute",
+                "ec2:DescribeVpcs",
+                "ec2:ImportKeyPair",
+                "ec2:RunInstances",
+                "ec2:ModifyInstanceAttribute",
+                "ec2:CreateLaunchTemplateVersion",
+                "eks:DescribeCluster",
+                "eks:ListUpdates",
+                "eks:UpdateClusterConfig",
+                "eks:UpdateClusterVersion",
+                "eks:DescribeUpdate",
+                "elasticloadbalancing:DescribeLoadBalancers",
+                "iam:GetRole",
+                "iam:ListRoles",
+                "iam:GetRolePolicy",
+                "iam:GetInstanceProfile",
+                "iam:ListInstanceProfiles",
+                "iam:ListRoleTags",
+                "iam:RemoveRoleFromInstanceProfile",
+                "iam:TagRole",
+                "iam:UntagRole"
+            ],
+            "Resource": [
+                "*"
+            ]
+        },
+        {
+            "Sid": "CfDeny",
+            "Effect": "Deny",
+            "Action": [
+                "cloudformation:*"
+            ],
+            "Resource": [
+                "*"
+            ],
+            "Condition": {
+                "ForAnyValue:StringLike": {
+                    "cloudformation:ImportResourceTypes": [
+                        "*"
+                    ]
+                }
+            }
+        },
+        {
+            "Sid": "ForAutoscalingLinkedRole",
+            "Effect": "Allow",
+            "Action": [
+                "iam:CreateServiceLinkedRole"
+            ],
+            "Resource": [
+                "arn:aws:iam::[YOUR-ACCOUNT-ID]:role/aws-service-role/autoscaling-plans.amazonaws.com/AWSServiceRoleForAutoScalingPlans_EC2AutoScaling"
+            ],
+            "Condition": {
+                "StringLike": {
+                    "iam:AWSServiceName": "autoscaling-plans.amazonaws.com"
+                }
+            }
+        },
+        {
+            "Sid": "ForEksLinkedRole",
+            "Effect": "Allow",
+            "Action": [
+                "iam:CreateServiceLinkedRole"
+            ],
+            "Resource": [
+                "arn:aws:iam::[YOUR-ACCOUNT-ID]:role/aws-service-role/eks.amazonaws.com/AWSServiceRoleForEKS"
+            ],
+            "Condition": {
+                "StringLike": {
+                    "iam:AWSServiceName": "eks.amazonaws.com"
+                }
+            }
+        }
+    ]
+}

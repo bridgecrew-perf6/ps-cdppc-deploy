@@ -1,0 +1,55 @@
+{
+    "Version": "2012-10-17",
+    "Id": "CMLPolicy_v1",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": "iam:SimulatePrincipalPolicy",
+            "Resource": "arn:aws:iam::[YOUR-ACCOUNT-ID]:role/[YOUR-IAM-ROLE-NAME]"
+        },
+        {
+            "Sid": "RestrictedPermissionsViaClouderaRequestTag",
+            "Effect": "Allow",
+            "Action":[
+                "elasticfilesystem:CreateFileSystem"
+            ],
+            "Resource": "*",
+            "Condition": {
+                "StringLike":{
+                    "aws:RequestTag/Cloudera-Resource-Name": "crn:cdp:*"
+                }
+            }
+        },
+        {
+            "Sid": "OtherPermissions",
+            "Effect": "Allow",
+            "Action": [
+                "elasticfilesystem:DescribeMountTargets",
+                "elasticfilesystem:DeleteAccessPoint",
+                "elasticfilesystem:CreateMountTarget",
+                "elasticfilesystem:DescribeAccessPoints",
+                "elasticfilesystem:DescribeFileSystems",
+                "elasticfilesystem:DeleteMountTarget",
+                "elasticfilesystem:CreateAccessPoint",
+                "elasticfilesystem:DeleteFileSystem",
+                "elasticfilesystem:DescribeMountTargetSecurityGroups"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "ForEFSLinkedRole",
+            "Effect": "Allow",
+            "Action": [
+              "iam:CreateServiceLinkedRole"
+            ],
+            "Resource": [
+              "arn:aws:iam::[YOUR-ACCOUNT-ID]:role/aws-service-role/elasticfilesystem.amazonaws.com/AWSServiceRoleForAmazonElasticFileSystem"
+            ],
+            "Condition": {
+              "StringLike": {
+                "iam:AWSServiceName": "elasticfilesystem.amazonaws.com"
+              }
+            }
+          }
+    ]
+}
